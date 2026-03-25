@@ -691,3 +691,673 @@ function applyFilters() {
     renderTable(currentData);
     if (typeof renderBinsList === 'function') renderBinsList(currentData);
 }
+
+//Muthumala Thashmika
+
+function simulateRealTimeUpdate() {
+    const pendingItems = RAW_DATA.filter(item => item.status === 'Pending' || item.status === 'In Route');
+    if (pendingItems.length === 0) return;
+
+    const idx = Math.floor(Math.random() * pendingItems.length);
+    const targetId = pendingItems[idx].id;
+
+    const originalItem = RAW_DATA.find(i => i.id === targetId);
+
+    if (originalItem.status === 'Pending') {
+        originalItem.status = 'In Route';
+    } else if (originalItem.status === 'In Route') {
+        triggerTruckAnimation(targetId);
+    }
+
+    if (originalItem.status !== 'Completed') {
+        applyFilters();
+    }
+}
+
+function triggerTruckAnimation(binId) {
+    const rows = document.querySelectorAll(`button[data-id="${binId}"].collect-btn`);
+    if (!rows.length) {
+        const item = RAW_DATA.find(i => i.id === binId);
+        if (item) {
+            item.status = 'Completed';
+            item.fillLevel = 0;
+            applyFilters();
+        }
+        return;
+    }
+
+    rows.forEach(btn => {
+        const row = btn.closest('tr');
+        if (!row) return;
+
+        row.classList.add('row-collecting', 'collecting-active');
+
+        const truck = document.createElement('div');
+        truck.className = 'truck-anim-container truck-anim-active';
+        truck.innerHTML = '<i class="fa-solid fa-truck-moving"></i> <span>Collecting...</span>';
+        const td = row.querySelector('td:nth-child(2)'); // Append to second td for reliable relative positioning
+        if (td) {
+            td.style.position = 'relative'; 
+            td.style.overflow = 'hidden';
+            td.appendChild(truck);
+        }
+
+        setTimeout(() => {
+            row.classList.remove('row-collecting', 'collecting-active');
+            if (td && td.contains(truck)) truck.remove();
+
+            const item = RAW_DATA.find(i => i.id === binId);
+            if (item && item.status !== 'Completed') {
+                item.status = 'Completed';
+                item.fillLevel = 0;
+                applyFilters();
+                showToast('Collection Successful', `Bin ${binId} has been emptied via truck.`, 'success', 'fa-truck-ramp-box');
+            }
+        }, 4000);
+    });
+}
+
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.collect-btn');
+    if (!btn) return;
+    const binId = btn.dataset.id;
+    
+    // Add immediate feedback to the button itself
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Collecting...';
+    btn.disabled = true;
+    
+    triggerTruckAnimation(binId);
+    
+    // Reset button after the animation completes
+    setTimeout(() => {
+        if (document.body.contains(btn)) {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    }, 4000);
+});
+
+document.addEventListener('click', e => {
+    const actionBtn = e.target.closest('.action-btn');
+    if (!actionBtn) return;
+    const binId = actionBtn.dataset.id;
+    if (typeof viewBinHistory === 'function') {
+        viewBinHistory(binId);
+    }
+});
+
+function showToast(title, message, type = 'success', iconName = 'fa-check-circle') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    toast.innerHTML = `
+        <i class="fa-solid ${iconName} toast-icon"></i>
+        <div class="toast-content">
+            <h4>${title}</h4>
+            <p>${message}</p>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => toast.classList.add('show'), 100);
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+}
+
+function renderBinsList(data) {
+    const listBody = document.getElementById('bins-list-tbody');
+    if (!listBody) return;
+
+    listBody.innerHTML = '';
+
+    data.forEach(item => {
+        const tr = document.createElement('tr');
+
+        let typeIcon, typeClass;
+        switch (item.type) {
+            case 'Solid': typeIcon = 'fa-trash-can'; typeClass = 'solid'; break;
+            case 'Recycle': typeIcon = 'fa-recycle'; typeClass = 'recycle'; break;
+            case 'Yard Waste': typeIcon = 'fa-leaf'; typeClass = 'yard'; break;
+        }
+
+        let statusClass;
+        switch (item.status) {
+            case 'Completed': statusClass = 'completed'; break;
+            case 'Pending': statusClass = 'pending'; break;
+            case 'Missed': statusClass = 'missed'; break;
+            case 'In Route': statusClass = 'en-route'; break;
+        }
+
+        tr.innerHTML = `
+            <td><strong>${item.id}</strong><br><span style="font-size:0.75rem;color:var(--text-muted)">Route: ${item.cycle}</span></td>
+            <td>
+                <span class="waste-type ${typeClass}">
+                    <i class="fa-solid ${typeIcon}"></i> ${item.type}
+                </span>
+            </td>
+            <td>
+                <div class="fill-level-container" style="min-width: 80px;" title="${item.fillLevel}%">
+                    <div class="fill-bar">
+                        <div class="fill-progress" style="width: ${item.fillLevel}%; background-color: ${item.fillLevel > 75 ? 'var(--color-danger)' : item.fillLevel > 50 ? 'var(--color-warning)' : 'var(--color-success)'}"></div>
+                    </div>
+                    <span style="font-size: 0.75rem;">${item.fillLevel}%</span>
+                </div>
+            </td>
+            <td>
+                <span class="status-indicator">
+                    <span class="status-dot ${statusClass}"></span>
+                    ${item.status}
+                </span>
+            </td>
+        `;
+        listBody.appendChild(tr);
+    });
+}
+
+function renderSchedule(filterDay = 'All') {
+    const grid = document.getElementById('schedule-grid');
+    if (!grid || !RAW_DATA.length) return;
+
+    const days = filterDay === 'All'
+        ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        : [filterDay];
+
+    const dayIcons = {
+        Monday: 'fa-1', Tuesday: 'fa-2', Wednesday: 'fa-3',
+        Thursday: 'fa-4', Friday: 'fa-5'
+    };
+
+    grid.innerHTML = '';
+
+    days.forEach(day => {
+        const dayBins = RAW_DATA.filter(b => b.day === day);
+        if (!dayBins.length) return;
+
+        const card = document.createElement('div');
+        card.className = 'widget-card';
+        card.style.cssText = 'flex-direction:column; align-items:flex-start; padding:20px; gap:0;';
+
+        const completedCount = dayBins.filter(b => b.status === 'Completed').length;
+        const pendingCount = dayBins.filter(b => b.status === 'Pending').length;
+        const missedCount = dayBins.filter(b => b.status === 'Missed').length;
+        const avgFill = Math.round(dayBins.reduce((s, b) => s + b.fillLevel, 0) / dayBins.length);
+
+        card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:14px;">
+                <h3 style="margin:0;font-size:1rem;font-weight:700;">${day}</h3>
+                <span style="font-size:0.75rem;background:var(--color-primary-light);color:var(--color-primary);
+                    padding:3px 10px;border-radius:20px;font-weight:600;">${dayBins.length} bins</span>
+            </div>
+            <div style="display:flex;gap:10px;width:100%;margin-bottom:14px;flex-wrap:wrap;">
+                <span style="font-size:0.75rem;color:var(--color-success);font-weight:600;">
+                    <i class="fa-solid fa-check"></i> ${completedCount} done
+                </span>
+                <span style="font-size:0.75rem;color:var(--color-warning);font-weight:600;">
+                    <i class="fa-solid fa-clock"></i> ${pendingCount} pending
+                </span>
+                ${missedCount > 0 ? `<span style="font-size:0.75rem;color:var(--color-danger);font-weight:600;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> ${missedCount} missed
+                </span>` : ''}
+            </div>
+            <div style="width:100%;margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px;">
+                    <span style="color:var(--text-muted);">Avg Fill Level</span>
+                    <strong>${avgFill}%</strong>
+                </div>
+                <div class="fill-bar" style="height:8px;">
+                    <div class="fill-progress" style="width:${avgFill}%;background:${avgFill > 75 ? 'var(--color-danger)' : avgFill > 50 ? 'var(--color-warning)' : 'var(--color-success)'};"></div>
+                </div>
+            </div>
+            <div style="width:100%;">
+                ${dayBins.slice(0, 4).map(b => `
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;
+                        padding:6px 0;border-bottom:1px solid var(--border-color);">
+                        <span style="font-weight:600;">${b.id}</span>
+                        <span style="color:var(--text-muted);">${b.time}</span>
+                        <span class="status-indicator">
+                            <span class="status-dot ${b.status.toLowerCase().replace(' ', '-')}"></span>
+                            ${b.status}
+                        </span>
+                    </div>`).join('')}
+                ${dayBins.length > 4 ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;text-align:center;">
+                    +${dayBins.length - 4} more bins this day</div>` : ''}
+            </div>`;
+
+        grid.appendChild(card);
+    });
+}
+
+document.addEventListener('click', e => {
+    const tab = e.target.closest('.schedule-day-tab');
+    if (!tab) return;
+    document.querySelectorAll('.schedule-day-tab').forEach(t => {
+        t.className = 'btn btn-outline btn-sm schedule-day-tab';
+    });
+    tab.className = 'btn btn-primary btn-sm schedule-day-tab';
+    renderSchedule(tab.dataset.day);
+});
+
+document.addEventListener('click', e => {
+    if (e.target.closest('#print-schedule-btn')) window.print();
+});
+
+function renderReports() {
+    if (!RAW_DATA.length) return;
+
+    const statsEl = document.getElementById('reports-stats');
+    if (statsEl) {
+        const total = RAW_DATA.length;
+        const completed = RAW_DATA.filter(b => b.status === 'Completed').length;
+        const missed = RAW_DATA.filter(b => b.status === 'Missed').length;
+        const avgFill = Math.round(RAW_DATA.reduce((s, b) => s + b.fillLevel, 0) / total);
+        const highFill = RAW_DATA.filter(b => b.fillLevel > 75).length;
+
+        statsEl.innerHTML = `
+            <div class="widget-card">
+                <div class="widget-icon success"><i class="fa-solid fa-check-double"></i></div>
+                <div class="widget-info"><h3>${completed}</h3><p>Completed Pickups</p></div>
+            </div>
+            <div class="widget-card">
+                <div class="widget-icon danger"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="widget-info"><h3>${missed}</h3><p>Missed Pickups</p></div>
+            </div>
+            <div class="widget-card">
+                <div class="widget-icon warning"><i class="fa-solid fa-fill-drip"></i></div>
+                <div class="widget-info"><h3>${avgFill}%</h3><p>Average Fill Level</p></div>
+            </div>
+            <div class="widget-card">
+                <div class="widget-icon primary"><i class="fa-solid fa-trash-can"></i></div>
+                <div class="widget-info"><h3>${highFill}</h3><p>Critical Bins (&gt;75%)</p></div>
+            </div>`;
+    }
+
+    const tbody = document.getElementById('reports-tbody');
+    if (tbody) {
+        const types = ['Solid', 'Recycle', 'Yard Waste'];
+        tbody.innerHTML = types.map(type => {
+            const bins = RAW_DATA.filter(b => b.type === type);
+            if (!bins.length) return '';
+            const avg = Math.round(bins.reduce((s, b) => s + b.fillLevel, 0) / bins.length);
+            const count = s => bins.filter(b => b.status === s).length;
+            const typeClass = type === 'Solid' ? 'solid' : type === 'Recycle' ? 'recycle' : 'yard';
+            const typeIcon = type === 'Solid' ? 'fa-trash-can' : type === 'Recycle' ? 'fa-recycle' : 'fa-leaf';
+            return `<tr>
+                <td><span class="waste-type ${typeClass}"><i class="fa-solid ${typeIcon}"></i> ${type}</span></td>
+                <td><strong>${bins.length}</strong></td>
+                <td style="color:var(--color-success);font-weight:600;">${count('Completed')}</td>
+                <td style="color:var(--color-warning);font-weight:600;">${count('Pending')}</td>
+                <td style="color:var(--color-primary);font-weight:600;">${count('In Route')}</td>
+                <td style="color:var(--color-danger);font-weight:600;">${count('Missed')}</td>
+                <td>
+                    <div class="fill-level-container">
+                        <div class="fill-bar"><div class="fill-progress" style="width:${avg}%;
+                            background:${avg > 75 ? 'var(--color-danger)' : avg > 50 ? 'var(--color-warning)' : 'var(--color-success)'}"></div></div>
+                        <span style="font-size:0.75rem;">${avg}%</span>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    const distEl = document.getElementById('fill-distribution');
+    if (distEl) {
+        const low = RAW_DATA.filter(b => b.fillLevel <= 33).length;
+        const medium = RAW_DATA.filter(b => b.fillLevel > 33 && b.fillLevel <= 66).length;
+        const high = RAW_DATA.filter(b => b.fillLevel > 66).length;
+        const total = RAW_DATA.length;
+        const band = (label, count, color, icon) => `
+            <div style="flex:1;min-width:140px;background:var(--bg-body);border-radius:12px;padding:16px;text-align:center;">
+                <div style="font-size:1.5rem;color:${color};margin-bottom:6px;"><i class="fa-solid ${icon}"></i></div>
+                <div style="font-size:1.75rem;font-weight:700;color:${color};">${count}</div>
+                <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">${label}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">${Math.round(count / total * 100)}% of fleet</div>
+            </div>`;
+        distEl.innerHTML =
+            band('Low (0–33%)', low, 'var(--color-success)', 'fa-battery-quarter') +
+            band('Medium (34–66%)', medium, 'var(--color-warning)', 'fa-battery-half') +
+            band('High (67–100%)', high, 'var(--color-danger)', 'fa-battery-full');
+    }
+}
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('#export-csv-btn')) return;
+    const headers = ['ID', 'Type', 'Day', 'Cycle', 'Status', 'Fill Level (%)', 'Time'];
+    const rows = RAW_DATA.map(b =>
+        [b.id, b.type, b.day, b.cycle, b.status, b.fillLevel, b.time].join(',')
+    );
+    const csv = [headers.join(','), ...rows].join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = 'waste_routes_report.csv';
+    a.click();
+    showToast('Export Complete', 'CSV file has been downloaded.', 'success', 'fa-file-csv');
+});
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('.nav-item')) return;
+    const tabName = e.target.closest('.nav-item').textContent.trim().toLowerCase();
+    if (tabName !== 'settings') return;
+
+    const nameEl = document.querySelector('.user-name');
+    const roleEl = document.querySelector('.user-role-label');
+    const nameInput = document.getElementById('settings-name');
+    const roleSelect = document.getElementById('settings-role');
+    if (nameInput && nameEl) nameInput.value = nameEl.textContent;
+    if (roleSelect && roleEl) {
+        const role = roleEl.textContent.replace(' (Offline)', '');
+        const opt = [...roleSelect.options].find(o => o.value === role);
+        if (opt) roleSelect.value = opt.value;
+    }
+});
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('#save-all-settings-btn')) return;
+    const name = document.getElementById('settings-name')?.value?.trim();
+    const role = document.getElementById('settings-role')?.value;
+
+    if (name) updateUserProfile(name, role || 'Admin');
+
+    const prefs = {
+        theme: document.getElementById('settings-theme')?.value,
+        landing: document.getElementById('settings-landing')?.value,
+        refresh: document.getElementById('settings-refresh')?.value,
+        compact: document.getElementById('settings-compact')?.checked,
+        notifMissed: document.getElementById('notif-missed')?.checked,
+        notifFill: document.getElementById('notif-fill')?.checked,
+        notifToasts: document.getElementById('notif-toasts')?.checked,
+        notifEmail: document.getElementById('notif-email')?.checked,
+    };
+    localStorage.setItem('ecocity_settings', JSON.stringify(prefs));
+
+    document.querySelector('.data-table')?.classList.toggle('compact', prefs.compact);
+
+    showToast('Settings Saved', 'Your preferences have been saved.', 'success', 'fa-floppy-disk');
+});
+
+function loadSavedSettings() {
+    try {
+        const prefs = JSON.parse(localStorage.getItem('ecocity_settings') || '{}');
+        if (prefs.theme) { const s = document.getElementById('settings-theme'); if (s) s.value = prefs.theme; }
+        if (prefs.landing) { const s = document.getElementById('settings-landing'); if (s) s.value = prefs.landing; }
+        if (prefs.refresh) { const s = document.getElementById('settings-refresh'); if (s) s.value = prefs.refresh; }
+        if (prefs.compact != null) {
+            const s = document.getElementById('settings-compact');
+            if (s) s.checked = prefs.compact;
+            document.querySelector('.data-table')?.classList.toggle('compact', prefs.compact);
+        }
+        if (prefs.notifMissed != null) { const s = document.getElementById('notif-missed'); if (s) s.checked = prefs.notifMissed; }
+        if (prefs.notifFill != null) { const s = document.getElementById('notif-fill'); if (s) s.checked = prefs.notifFill; }
+        if (prefs.notifToasts != null) { const s = document.getElementById('notif-toasts'); if (s) s.checked = prefs.notifToasts; }
+        if (prefs.notifEmail != null) { const s = document.getElementById('notif-email'); if (s) s.checked = prefs.notifEmail; }
+    } catch (e) { }
+}
+
+[document.getElementById('logout-settings-btn'), document.getElementById('sidebar-logout')].forEach(btn => {
+    if (!btn) return;
+    btn.addEventListener('click', e => {
+        e.preventDefault();
+        localStorage.removeItem('ecocity_session');
+        dashboardView.style.display = 'none';
+        authView.style.display = 'flex';
+        showToast('Signed Out', 'You have been signed out.', 'success', 'fa-right-from-bracket');
+    });
+});
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('#clear-data-btn')) return;
+    const filterDay = document.getElementById('filter-day');
+    const filterType = document.getElementById('filter-type');
+    const filterFill = document.getElementById('filter-fill');
+    if (filterDay) filterDay.value = '';
+    if (filterType) filterType.value = '';
+    if (filterFill) filterFill.value = '';
+    currentData = [...RAW_DATA];
+    renderTable(currentData);
+    showToast('Filters Cleared', 'All table filters have been reset.', 'success', 'fa-rotate-left');
+});
+
+document.addEventListener('click', async e => {
+    if (!e.target.closest('#clear-users-btn')) return;
+    try {
+        const res = await fetch('http://127.0.0.1:5000/api/clear-users', { method: 'POST' });
+        if (res.ok) {
+            showToast('Users Cleared', 'All registered users have been removed.', 'warning', 'fa-trash');
+        } else {
+            showToast('Error', 'Could not clear users.', 'danger');
+        }
+    } catch {
+        showToast('Offline', 'Backend not reachable. Cannot clear users.', 'danger');
+    }
+});
+
+const historyModal = document.getElementById('bin-history-modal');
+const historyBinId = document.getElementById('history-bin-id');
+const closeHistoryModal = document.getElementById('close-history-modal');
+
+window.viewBinHistory = function (id) {
+    if (historyBinId) historyBinId.textContent = `Bin ID: ${id}`;
+    if (historyModal) historyModal.classList.remove('hidden');
+};
+
+if (closeHistoryModal) {
+    closeHistoryModal.addEventListener('click', () => historyModal.classList.add('hidden'));
+}
+
+function simulateNearbyAlert() {
+    const role = document.querySelector('.user-role-label')?.textContent || '';
+    if (role.toLowerCase().includes('resident')) {
+        const nearbyBin = currentData[Math.floor(Math.random() * currentData.length)];
+        if (nearbyBin && nearbyBin.fillLevel > 70) {
+            showToast('Nearby Alert', `Bin ${nearbyBin.id} near your location is almost full.`, 'warning', 'fa-location-dot');
+        }
+    }
+}
+setInterval(simulateNearbyAlert, 45000);
+
+const addBinModal = document.getElementById('add-bin-modal');
+const closeAddBinModal = document.getElementById('close-add-bin-modal');
+const saveNewBinBtn = document.getElementById('save-new-bin-btn');
+const addBinBtn = document.getElementById('add-bin-btn');
+
+function getStatusColor(status) {
+    switch (status) {
+        case 'Completed': return 'var(--color-success)';
+        case 'Pending': return 'var(--color-warning)';
+        case 'Missed': return 'var(--color-danger)';
+        case 'In Route': return 'var(--color-primary)';
+        default: return 'var(--color-neutral)';
+    }
+}
+
+function renderBinsList(data) {
+    const binsListTbody = document.getElementById('bins-list-tbody');
+    if (!binsListTbody) return;
+
+    binsListTbody.innerHTML = '';
+
+    data.forEach(bin => {
+        const tr = document.createElement('tr');
+
+        let statusColor = 'var(--color-success)';
+        if (bin.fillLevel >= 85) statusColor = 'var(--color-danger)';
+        else if (bin.fillLevel >= 50) statusColor = 'var(--color-warning)';
+
+        const daysToFull = Math.max(0, (100 - bin.fillLevel) / 20);
+        const predictedDate = new Date();
+        predictedDate.setDate(predictedDate.getDate() + daysToFull);
+        const predictionText = daysToFull < 0.5 ? 'Today' : predictedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+        tr.innerHTML = `
+            <td><strong>${bin.id}</strong><br><span style="font-size:0.75rem;color:var(--text-muted)"><i class="fa-solid fa-location-dot"></i> ${bin.city || 'Colombo'}</span></td>
+            <td>${bin.type}</td>
+            <td>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="fill-bar" style="flex:1; height:8px;"><div class="fill-progress" style="width:${bin.fillLevel}%; background-color:${statusColor};"></div></div>
+                    <span style="font-size:12px; min-width:30px;">${Math.round(bin.fillLevel)}%</span>
+                </div>
+            </td>
+            <td><span class="badge ${bin.fillLevel >= 85 ? 'badge-danger' : 'badge-neutral'}">${predictionText}</span></td>
+            <td><span class="status-dot" style="background-color:${getStatusColor(bin.status)};"></span> ${bin.status}</td>
+            <td>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-icon btn-sm" onclick="editBin('${bin.id}')" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <button class="btn btn-icon btn-sm text-danger" onclick="deleteBin('${bin.id}')" title="Remove"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </td>
+        `;
+        binsListTbody.appendChild(tr);
+    });
+}
+
+window.editBin = function (id) {
+    const bin = currentData.find(b => b.id === id);
+    if (!bin) return;
+    const newStatus = prompt(`Update status for ${id}? (Pending, In Route, Completed, Missed)`, bin.status);
+    if (newStatus && ['Pending', 'In Route', 'Completed', 'Missed'].includes(newStatus)) {
+        bin.status = newStatus;
+        if (newStatus === 'Completed') bin.fillLevel = 0;
+        renderTable(currentData);
+        renderBinsList(currentData);
+        showToast('Updated', `Bin ${id} status set to ${newStatus}`, 'success');
+    }
+};
+
+window.deleteBin = function (id) {
+    if (confirm(`Are you sure you want to remove bin ${id}?`)) {
+        currentData = currentData.filter(b => b.id !== id);
+        renderTable(currentData);
+        renderBinsList(currentData);
+        showToast('Bin Removed', `${id} deleted from system.`, 'warning');
+    }
+};
+
+if (addBinBtn) {
+    addBinBtn.addEventListener('click', () => addBinModal.classList.remove('hidden'));
+}
+
+if (closeAddBinModal) {
+    closeAddBinModal.addEventListener('click', () => addBinModal.classList.add('hidden'));
+}
+
+if (saveNewBinBtn) {
+    saveNewBinBtn.addEventListener('click', () => {
+        const id = document.getElementById('new-bin-id').value;
+        const type = document.getElementById('new-bin-type').value;
+        const day = document.getElementById('new-bin-day').value;
+
+        if (!id) return alert('Please enter a Bin ID');
+
+        const newBin = {
+            id: id,
+            type: type,
+            day: day,
+            cycle: 'Weekly',
+            fillLevel: 0,
+            status: 'Pending',
+            lat: 39.2904,
+            lng: -76.6122,
+            time: '08:00 AM'
+        };
+
+        currentData.unshift(newBin);
+        renderTable(currentData);
+        renderBinsList(currentData);
+        addBinModal.classList.add('hidden');
+        showToast('Bin Added', `New ${type} bin ${id} created successfully.`, 'success');
+    });
+}
+document.addEventListener('DOMContentLoaded', () => {
+    initApp().catch(err => console.error('App Init Failed', err));
+});
+
+function renderComplaints() {
+    const tbody = document.getElementById('complaints-tbody');
+    if (!tbody) return;
+
+    const total = MOCK_COMPLAINTS.length;
+    const resolved = MOCK_COMPLAINTS.filter(c => c.status === 'Resolved').length;
+    const open = total - resolved;
+
+    const elTotal = document.getElementById('stat-total-complaints');
+    const elOpen = document.getElementById('stat-open-complaints');
+    const elResolved = document.getElementById('stat-resolved-complaints');
+    if (elTotal) elTotal.textContent = total;
+    if (elOpen) elOpen.textContent = open;
+    if (elResolved) elResolved.textContent = resolved;
+
+    const emptyState = document.getElementById('complaints-empty-state');
+    const table = tbody.closest('table');
+    
+    if (open === 0 && total === 0) {
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (table) table.style.display = 'none';
+        return;
+    }
+    
+    if (emptyState) emptyState.classList.add('hidden');
+    if (table) table.style.display = 'table';
+
+    tbody.innerHTML = MOCK_COMPLAINTS.map(c => `
+        <tr>
+            <td><strong>${c.id}</strong><br><span style="font-size:0.75rem;color:var(--text-muted)">${c.date}</span></td>
+            <td>${c.binId}</td>
+            <td>${c.type}</td>
+            <td>${c.reporter}</td>
+            <td>
+                <span class="status-indicator">
+                    <span class="status-dot" style="background-color:${c.status === 'Resolved' ? 'var(--color-success)' : 'var(--color-warning)'}"></span>
+                    ${c.status}
+                </span>
+            </td>
+            <td>
+                ${c.status === 'Pending' ? `<button class="btn btn-outline btn-sm" onclick="resolveComplaint('${c.id}')"><i class="fa-solid fa-check"></i> Resolve</button>` : '<span style="color:var(--text-muted);font-size:0.875rem;">Done</span>'}
+            </td>
+        </tr>
+    `).join('');
+}
+
+window.resolveComplaint = function(id) {
+    const c = MOCK_COMPLAINTS.find(x => x.id === id);
+    if (c) {
+        c.status = 'Resolved';
+        renderComplaints();
+        showToast('Complaint Resolved', `Ticket ${id} marked as resolved.`, 'success');
+    }
+};
+
+const addComplaintModal = document.getElementById('add-complaint-modal');
+const closeComplaintModal = document.getElementById('close-complaint-modal');
+const saveNewComplaintBtn = document.getElementById('save-new-complaint-btn');
+const addComplaintBtn = document.getElementById('add-complaint-btn');
+
+if (addComplaintBtn) addComplaintBtn.addEventListener('click', () => addComplaintModal.classList.remove('hidden'));
+if (closeComplaintModal) closeComplaintModal.addEventListener('click', () => addComplaintModal.classList.add('hidden'));
+
+if (saveNewComplaintBtn) {
+    saveNewComplaintBtn.addEventListener('click', () => {
+        const binId = document.getElementById('new-complaint-bin').value || 'Unspecified';
+        const type = document.getElementById('new-complaint-type').value;
+        const desc = document.getElementById('new-complaint-desc').value;
+        if (!desc) return alert('Please provide some details for the complaint.');
+
+        const reporterNode = document.querySelector('.user-name');
+        const reporterName = reporterNode ? reporterNode.textContent : 'Resident';
+
+        const newId = 'CMP-' + Math.floor(8000 + Math.random() * 1000);
+        MOCK_COMPLAINTS.unshift({
+            id: newId, binId, type, reporter: reporterName, status: 'Pending', date: 'Just now', desc
+        });
+
+        document.getElementById('new-complaint-bin').value = '';
+        document.getElementById('new-complaint-desc').value = '';
+        
+        renderComplaints();
+        addComplaintModal.classList.add('hidden');
+        showToast('Complaint Logged', 'Your issue has been submitted successfully.', 'success', 'fa-bullhorn');
+    });
+}
