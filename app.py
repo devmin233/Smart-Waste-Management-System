@@ -60,3 +60,47 @@ def predict_fill_level():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+@app.route('/api/login', methods=['POST'])
+def login():
+    req = request.get_json() or {}
+    email = req.get('email')
+    password = req.get('password')
+    requested_role = req.get('role', 'Resident')
+    
+    if requested_role == 'Admin':
+        if email == 'admin@gmail.com' and password == 'password123':
+            return jsonify({"status": "success", "token": "ecocity-token-xyz", "role": "Admin", "name": "Admin"})
+        return jsonify({"status": "error", "message": "Invalid admin credentials"}), 401
+        
+    if requested_role == 'Resident':
+        if os.path.exists('users.txt'):
+            with open('users.txt', 'r') as f:
+                for line in f.readlines():
+                    if ',' in line:
+                        parts = line.strip().split(',')
+                        if len(parts) >= 3:
+                            u_name, u_email, u_pass = parts[0], parts[1], parts[2]
+                            if email == u_email and password == u_pass:
+                                return jsonify({"status": "success", "token": "ecocity-token-db", "role": "Resident", "name": u_name})
+        return jsonify({"status": "error", "message": "Invalid resident credentials"}), 401
+        
+    return jsonify({"status": "error", "message": "Invalid credentials"}), 401
+
+@app.route('/api/register', methods=['POST'])
+def register():
+    req = request.get_json() or {}
+    email = req.get('email')
+    password = req.get('password')
+    name = req.get('name')
+    
+    if not email or not password:
+        return jsonify({"status": "error", "message": "Missing credentials"}), 400
+        
+    with open('users.txt', 'a') as f:
+        f.write(f"{name},{email},{password}\n")
+        
+    return jsonify({"status": "success", "message": "Account securely saved in backend!"})
+
+if __name__ == '__main__':
+    print("Starting Smart Waste Management API on http://127.0.0.1:5000")
+    app.run(debug=True, port=5000)
