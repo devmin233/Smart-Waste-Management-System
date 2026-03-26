@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Waste Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="auth-view" class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <i class="fa-solid fa-seedling fa-3x" style="color: var(--color-success); margin-bottom: 16px;"></i>
+                <h2>EcoCityWaste</h2>
+                <p>Welcome back! Please login to your account.</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login">Log In</button>
+                <button class="auth-tab" id="tab-register">Register</button>
+            </div>
+
+            <div id="form-login" class="auth-form-container active">
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <label>Log In As</label>
+                    <select id="login-role" class="search-input w-100" style="padding: 12px; cursor: pointer;">
+                        <option value="Admin">System Administrator</option>
+                        <option value="Resident">City Resident</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="text" id="login-email" class="search-input w-100" placeholder="admin@gmail.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-pass" class="search-input w-100" placeholder="••••••••">
+                </div>
+                <button class="btn btn-primary w-100" id="btn-do-login" style="margin-top: 8px;">Sign In</button>
+            </div>
+
+            <div id="form-register" class="auth-form-container hidden">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" class="search-input w-100" placeholder="Danuja Thashmitha">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="register-email" class="search-input w-100" placeholder="danuja@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="register-pass" class="search-input w-100" placeholder="••••••••">
+                </div>
+                <button class="btn btn-primary w-100" id="btn-do-register" style="margin-top: 8px;">Create
+                    Account</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container" id="dashboard-view" style="display: none;">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fa-solid fa-recycle fa-lg"></i>
+                    <span>EcoCityWaste</span>
+                </div>
+            </div>
+
+            <ul class="nav-links">
+                <li class="nav-item active">
+                    <a href="#"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#"><i class="fa-solid fa-dumpster"></i> Bins</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#"><i class="fa-solid fa-calendar-check"></i> Schedule</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#"><i class="fa-solid fa-chart-pie"></i> Reports</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#"><i class="fa-solid fa-bullhorn"></i> Complaints</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#"><i class="fa-solid fa-gear"></i> Settings</a>
+                </li>
+                <li class="nav-item" id="sidebar-logout"
+                    style="margin-top: auto; border-top: 1px solid var(--border-color);">
+                    <a href="#" style="color: var(--color-danger);"><i class="fa-solid fa-right-from-bracket"></i> Sign
+                        Out</a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <p style="font-size: 0.75rem; opacity: 0.7; margin-bottom: 4px;">Current Role</p>
+                <p style="font-weight: 600; font-size: 0.875rem;"><i class="fa-solid fa-user-shield"
+                        style="margin-right: 8px;"></i> <span id="current-role-display">Admin</span></p>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-search">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" placeholder="Search bins, statuses, or locations..." class="search-input">
+                </div>
+
+                <div class="topbar-actions">
+                    <div class="notifications dropdown-container" id="btn-notifications"
+                        style="cursor: pointer; position: relative;">
+                        <i class="fa-solid fa-bell notification-icon"></i>
+                        <span class="badge notification-badge" id="notification-count">0</span>
+
+                        <div class="notifications-dropdown hidden" id="notifications-dropdown">
+                            <div class="dropdown-header">
+                                <h4>Notifications</h4>
+                                <span class="mark-read" id="mark-all-read">Mark all read</span>
+                            </div>
+                            <div class="dropdown-body" id="notifications-list">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="user-profile" id="btn-profile" style="cursor: pointer;">
+                        <img src="https://ui-avatars.com/api/?name=Admin+User&background=10b981&color=fff"
+                            alt="User Profile" class="avatar">
+                        <div class="user-info">
+                            <span class="user-name">Eco User</span>
+                            <span class="user-role-label">System Admin</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <div id="view-dashboard" class="view-section">
+                    <div class="page-header">
+                        <div>
+                            <h1>Command Center</h1>
+                            <p class="text-muted">Real-time overview of municipal waste operations</p>
+                        </div>
+                        <button class="btn btn-primary" id="refresh-data-btn">
+                            <i class="fa-solid fa-rotate-right"></i> Refresh Data
+                        </button>
+                    </div>
+
+                    <div class="dashboard-widgets"
+                        style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                        <button class="widget-card" id="widget-prediction"
+                            style="cursor: pointer; border: none; text-align: left; width: 100%; height: 100%;">
+                            <div class="widget-icon primary"><i class="fa-solid fa-chart-line"></i></div>
+                            <div class="widget-info">
+                                <h3>AI Analytics</h3>
+                                <p>Predict growth patterns</p>
+                            </div>
+                        </button>
+
+                        <button class="widget-card alert-card" id="widget-logout"
+                            style="cursor: pointer; border: none; text-align: left; width: 100%; height: 100%; display: none;">
+                            <div class="widget-icon danger"><i class="fa-solid fa-right-from-bracket"></i></div>
+                            <div class="widget-info">
+                                <h3>Sign Out</h3>
+                                <p>End current session</p>
+                            </div>
+                        </button>
+
+                        <div class="widget-card"
+                            style="background: var(--color-primary-light); border: 1px solid var(--color-primary);">
+                            <div class="widget-icon primary" style="background: white;"><i
+                                    class="fa-solid fa-truck-fast"></i></div>
+                            <div class="widget-info">
+                                <h3>Fleet Activity</h3>
+                                <p>Live Collection Mode</p>
+                            </div>
+                        </div>
+                    </div>
+                    <section class="data-section">
+                        <div class="section-header">
+                            <h2>Collection Schedule & Status</h2>
+
+                            <div class="filters-container">
+                                <div class="filter-group">
+                                    <label for="filter-day">Day</label>
+                                    <div class="select-wrapper">
+                                        <select id="filter-day" class="form-select">
+                                            <option value="All">All Days</option>
+                                            <option value="Monday">Monday</option>
+                                            <option value="Tuesday">Tuesday</option>
+                                            <option value="Wednesday">Wednesday</option>
+                                            <option value="Thursday">Thursday</option>
+                                            <option value="Friday">Friday</option>
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down select-icon"></i>
+                                    </div>
+                                </div>
+
+                                <div class="filter-group">
+                                    <label for="filter-type">Waste Type</label>
+                                    <div class="select-wrapper">
+                                        <select id="filter-type" class="form-select">
+                                            <option value="All">All Types</option>
+                                            <option value="Solid">Solid</option>
+                                            <option value="Recycle">Recycle</option>
+                                            <option value="Yard Waste">Yard Waste</option>
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down select-icon"></i>
+                                    </div>
+                                </div>
+
+                                <div class="filter-group">
+                                    <label for="filter-fill">Fill Level</label>
+                                    <div class="select-wrapper">
+                                        <select id="filter-fill" class="form-select">
+                                            <option value="All">All Levels</option>
+                                            <option value="High">&gt; 75% (High)</option>
+                                            <option value="Medium">50% - 75% (Medium)</option>
+                                            <option value="Low">&lt; 50% (Low)</option>
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down select-icon"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Waste Type</th>
+                                        <th>Day</th>
+                                        <th>Cycle</th>
+                                        <th>Fill Level</th>
+                                        <th>Pickup Status</th>
+                                        <th class="actions-col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="schedule-tbody">
+                                </tbody>
+                            </table>
+
+                            <div id="empty-state" class="empty-state hidden">
+                                <i class="fa-solid fa-magnifying-glass fa-3x"></i>
+                                <h3>No results found</h3>
+                                <p>Try adjusting your filter criteria</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="view-bins" class="view-section hidden">
+                    <div class="page-header">
+                        <div>
+                            <h1>Live Operations Data</h1>
+                            <p class="text-muted">Real-time tracking of route operations and bin locations.</p>
+                        </div>
+                        <button class="btn btn-primary" id="add-bin-btn">
+                            <i class="fa-solid fa-plus"></i> Add New Bin
+                        </button>
+                    </div>
+
+                    <div class="table-container widget-card" style="padding: 24px;">
+                        <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 1.125rem; font-weight: 600;">Bin
+                            Inventory Details</h3>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Bin ID</th>
+                                    <th>Waste Type</th>
+                                    <th>Fill Level</th>
+                                    <th>Predicted Full</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bins-list-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="view-schedule" class="view-section hidden">
+                    <div class="page-header">
+                        <div>
+                            <h1>Collection Schedule</h1>
+                            <p class="text-muted">Weekly pickup calendar grouped by day and waste type.</p>
+                        </div>
+                        <button class="btn btn-primary" id="print-schedule-btn">
+                            <i class="fa-solid fa-print"></i> Print Schedule
+                        </button>
+                    </div>
+
+                    <div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;" id="schedule-day-tabs">
+                        <button class="btn btn-primary btn-sm schedule-day-tab" data-day="All">All Days</button>
+                        <button class="btn btn-outline btn-sm schedule-day-tab" data-day="Monday">Monday</button>
+                        <button class="btn btn-outline btn-sm schedule-day-tab" data-day="Tuesday">Tuesday</button>
+                        <button class="btn btn-outline btn-sm schedule-day-tab" data-day="Wednesday">Wednesday</button>
+                        <button class="btn btn-outline btn-sm schedule-day-tab" data-day="Thursday">Thursday</button>
+                        <button class="btn btn-outline btn-sm schedule-day-tab" data-day="Friday">Friday</button>
+                    </div>
+
+                    <div id="schedule-grid"
+                        style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+                    </div>
+                </div>
+
+                <div id="view-reports" class="view-section hidden">
+                    <div class="page-header">
+                        <div>
+                            <h1>Analytics &amp; Reports</h1>
+                            <p class="text-muted">Historical data, performance metrics, and exports.</p>
+                        </div>
+                        <button class="btn btn-primary" id="export-csv-btn">
+                            <i class="fa-solid fa-file-csv"></i> Export CSV
+                        </button>
+                    </div>
+
+                    <div class="dashboard-widgets" id="reports-stats" style="margin-bottom:24px;">
+                    </div>
+
+                    <div class="data-section">
+                        <div class="section-header">
+                            <h2><i class="fa-solid fa-chart-bar"
+                                    style="margin-right:8px; color:var(--color-primary);"></i>Status Breakdown by Waste
+                                Type</h2>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Waste Type</th>
+                                        <th>Total Bins</th>
+                                        <th>Completed</th>
+                                        <th>Pending</th>
+                                        <th>In Route</th>
+                                        <th>Missed</th>
+                                        <th>Avg Fill %</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reports-tbody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="widget-card" style="margin-top:20px; padding:24px;">
+                        <h3 style="margin:0 0 16px; font-size:1rem; font-weight:600;"><i class="fa-solid fa-chart-pie"
+                                style="margin-right:8px; color:var(--color-warning);"></i>Fill Level Distribution</h3>
+                        <div id="fill-distribution" style="display:flex; gap:16px; flex-wrap:wrap;">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-complaints" class="view-section hidden">
+                    <div class="page-header">
+                        <div>
+                            <h1>Resident Complaints</h1>
+                            <p class="text-muted">Track and resolve issues reported by the community.</p>
+                        </div>
+                        <button class="btn btn-primary" id="add-complaint-btn">
+                            <i class="fa-solid fa-bullhorn"></i> Log New Complaint
+                        </button>
+                    </div>
+
+                    <div class="dashboard-widgets" id="complaints-stats" style="margin-bottom:24px;">
+                        <div class="widget-card">
+                            <div class="widget-icon primary"><i class="fa-solid fa-clipboard-list"></i></div>
+                            <div class="widget-info"><h3 id="stat-total-complaints">0</h3><p>Total Complaints</p></div>
+                        </div>
+                        <div class="widget-card">
+                            <div class="widget-icon warning"><i class="fa-solid fa-hourglass-half"></i></div>
+                            <div class="widget-info"><h3 id="stat-open-complaints">0</h3><p>Pending Resolution</p></div>
+                        </div>
+                        <div class="widget-card">
+                            <div class="widget-icon success"><i class="fa-solid fa-check-double"></i></div>
+                            <div class="widget-info"><h3 id="stat-resolved-complaints">0</h3><p>Resolved</p></div>
+                        </div>
+                    </div>
+
+                    <div class="data-section">
+                        <div class="section-header">
+                            <h2><i class="fa-solid fa-comments" style="margin-right:8px; color:var(--color-primary);"></i>Recent Reports</h2>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ticket ID</th>
+                                        <th>Bin ID</th>
+                                        <th>Issue Type</th>
+                                        <th>Reported By</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="complaints-tbody">
+                                </tbody>
+                            </table>
+                            <div id="complaints-empty-state" class="empty-state hidden">
+                                <i class="fa-solid fa-check-circle fa-3x" style="color:var(--color-success)"></i>
+                                <h3>No open complaints</h3>
+                                <p>All community issues have been resolved.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-settings" class="view-section hidden">
+                    <div class="page-header">
+                        <div>
+                            <h1>Settings</h1>
+                            <p class="text-muted">Manage your account, preferences and system configuration.</p>
+                        </div>
+                        <button class="btn btn-primary" id="save-all-settings-btn">
+                            <i class="fa-solid fa-floppy-disk"></i> Save All Changes
+                        </button>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+
+                        <div class="data-section">
+                            <div class="section-header">
+                                <h2><i class="fa-solid fa-user-circle"
+                                        style="margin-right:8px;color:var(--color-primary);"></i>Account Profile</h2>
+                            </div>
+                            <div style="padding:24px; display:flex; flex-direction:column; gap:14px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label>Full Name</label>
+                                    <input type="text" id="settings-name" class="search-input w-100"
+                                        placeholder="Your name">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>Email Address</label>
+                                    <input type="email" id="settings-email" class="search-input w-100"
+                                        placeholder="your@email.com">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>Role</label>
+                                    <div class="select-wrapper">
+                                        <select id="settings-role" class="form-select w-100">
+                                            <option>Admin</option>
+                                            <option>Field Operator</option>
+                                            <option>Manager</option>
+                                            <option>Read Only</option>
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down select-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>New Password</label>
+                                    <input type="password" id="settings-password" class="search-input w-100"
+                                        placeholder="Leave blank to keep current">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="data-section">
+                            <div class="section-header">
+                                <h2><i class="fa-solid fa-bell"
+                                        style="margin-right:8px;color:var(--color-warning);"></i>Notification
+                                    Preferences</h2>
+                            </div>
+                            <div style="padding:24px; display:flex; flex-direction:column; gap:16px;">
+                                <div class="settings-toggle-row">
+                                    <div>
+                                        <div style="font-size:0.875rem;font-weight:600;">Missed Pickup Alerts</div>
+                                        <div style="font-size:0.75rem;color:var(--text-muted);">Notify when a bin pickup
+                                            is missed</div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="notif-missed" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="settings-toggle-row">
+                                    <div>
+                                        <div style="font-size:0.875rem;font-weight:600;">High Fill Level Alerts</div>
+                                        <div style="font-size:0.75rem;color:var(--text-muted);">Alert when a bin exceeds
+                                            75% capacity</div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="notif-fill" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="settings-toggle-row">
+                                    <div>
+                                        <div style="font-size:0.875rem;font-weight:600;">Live Update Toasts</div>
+                                        <div style="font-size:0.75rem;color:var(--text-muted);">Show real-time status
+                                            change toasts</div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="notif-toasts" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="settings-toggle-row">
+                                    <div>
+                                        <div style="font-size:0.875rem;font-weight:600;">Email Digest</div>
+                                        <div style="font-size:0.75rem;color:var(--text-muted);">Daily summary email
+                                            report</div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="notif-email">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="data-section">
+                            <div class="section-header">
+                                <h2><i class="fa-solid fa-sliders"
+                                        style="margin-right:8px;color:var(--color-success);"></i>System Preferences</h2>
+                            </div>
+                            <div style="padding:24px; display:flex; flex-direction:column; gap:14px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label>Theme</label>
+                                    <div class="select-wrapper">
+                                        <select id="settings-theme" class="form-select w-100">
+                                            <option>System Default</option>
+                                            <option>Light Mode</option>
+                                            <option>Dark Mode</option>
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down select-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>Default Dashboard View</label>
+                                    <div class="select-wrapper">
+                                        <select id="settings-landing" class="form-select w-100">
+                                            <option>Dashboard</option>
+                                            <option>Schedule</option>
+                                            <option>Bins</option>
+                                            <option>Reports</option>
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down select-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>Refresh Interval</label>
+                                    <div class="select-wrapper">
+                                        <select id="settings-refresh" class="form-select w-100">
+                                            <option>15 seconds</option>
+                                            <option>30 seconds</option>
+                                            <option>1 minute</option>
+                                            <option>Off</option>
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down select-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="settings-toggle-row">
+                                    <div>
+                                        <div style="font-size:0.875rem;font-weight:600;">Compact Table View</div>
+                                        <div style="font-size:0.75rem;color:var(--text-muted);">Reduce row height to fit
+                                            more data</div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="settings-compact">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="data-section" style="border-color: var(--color-danger-bg);">
+                            <div class="section-header" style="background:rgba(239,68,68,0.05);">
+                                <h2><i class="fa-solid fa-shield-exclamation"
+                                        style="margin-right:8px;color:var(--color-danger);"></i>Danger Zone</h2>
+                            </div>
+                            <div style="padding:24px; display:flex; flex-direction:column; gap:12px;">
+                                <p style="font-size:0.875rem;color:var(--text-muted);margin:0;">
+                                    These actions cannot be undone. Please proceed with caution.
+                                </p>
+                                <button class="btn btn-outline btn-sm" id="clear-data-btn"
+                                    style="border-color:var(--color-warning);color:var(--color-warning);">
+                                    <i class="fa-solid fa-rotate-left"></i> Reset All Filters
+                                </button>
+                                <button class="btn btn-outline btn-sm" id="logout-settings-btn"
+                                    style="border-color:var(--color-danger);color:var(--color-danger);">
+                                    <i class="fa-solid fa-right-from-bracket"></i> Sign Out of Account
+                                </button>
+                                <button class="btn btn-outline btn-sm" id="clear-users-btn"
+                                    style="border-color:var(--color-danger);color:var(--color-danger);">
+                                    <i class="fa-solid fa-trash"></i> Clear All Registered Users
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <div id="prediction-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-chart-line"></i> AI Fill Level Prediction</h3>
+                <button class="btn-close" id="close-prediction-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px;">
+                <p style="margin-bottom: 16px;">Generating fill level forecasts for the next 7 days based on current
+                    trends...</p>
+
+                <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px;">
+                    <span style="font-weight: 600; min-width: 100px;">SW-1001</span>
+                    <div class="fill-bar">
+                        <div class="fill-progress" style="width: 85%; background-color: var(--color-danger);"></div>
+                    </div>
+                    <span style="min-width: 50px;">85%</span>
+                </div>
+
+                <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px;">
+                    <span style="font-weight: 600; min-width: 100px;">RY-1005</span>
+                    <div class="fill-bar">
+                        <div class="fill-progress" style="width: 40%; background-color: var(--color-success);"></div>
+                    </div>
+                    <span style="min-width: 50px;">40%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-bin-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-plus"></i> Add New Waste Bin</h3>
+                <button class="btn-close" id="close-add-bin-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px;">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Bin ID (e.g., SW-1016)</label>
+                    <input type="text" id="new-bin-id" class="search-input w-100" placeholder="Unique ID">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Waste Type</label>
+                    <select id="new-bin-type" class="form-select w-100">
+                        <option value="Solid">Solid</option>
+                        <option value="Recycle">Recycle</option>
+                        <option value="Yard Waste">Yard Waste</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Pickup Day</label>
+                    <select id="new-bin-day" class="form-select w-100">
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary w-100" id="save-new-bin-btn">Create Bin</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-complaint-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-bullhorn"></i> Log New Complaint</h3>
+                <button class="btn-close" id="close-complaint-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px;">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Affected Bin ID (Optional)</label>
+                    <input type="text" id="new-complaint-bin" class="search-input w-100" placeholder="e.g., BIN-104">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Issue Type</label>
+                    <select id="new-complaint-type" class="form-select w-100">
+                        <option value="Overflowing">Overflowing Bin</option>
+                        <option value="Strong Odor">Strong Odor</option>
+                        <option value="Damaged Bin">Damaged Bin</option>
+                        <option value="Missed Pickup">Missed Pickup</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label>Description / Details</label>
+                    <textarea id="new-complaint-desc" class="search-input w-100" rows="3" placeholder="Provide more context..." style="padding: 12px; resize: vertical; display: block;"></textarea>
+                </div>
+                <button class="btn btn-primary w-100" id="save-new-complaint-btn">Submit Complaint</button>
+            </div>
+        </div>
+    </div>
+    <div id="profile-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-gear"></i> User Profile Settings</h3>
+                <button class="btn-close" id="close-profile-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px;">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Full Name</label>
+                    <input type="text" id="profile-name-input" class="search-input w-100" value="Alex M.">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Email</label>
+                    <input type="text" id="profile-email-input" class="search-input w-100" value="admin@ecocity.gov">
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label>Theme Preference</label>
+                    <select id="profile-theme-select" class="form-select w-100">
+                        <option value="System Default">System Default</option>
+                        <option value="Light Mode">Light Mode</option>
+                        <option value="Dark Mode">Dark Mode</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary w-100" id="save-profile-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <div id="bin-history-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Bin Collection History</h3>
+                <button class="btn-close" id="close-history-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px;">
+                <h4 id="history-bin-id" style="margin-bottom: 12px; color: var(--color-primary);">Bin ID: --</h4>
+                <div class="history-timeline"
+                    style="border-left: 2px solid var(--border-color); padding-left: 16px; margin-left: 8px;">
+                    <div style="margin-bottom: 12px; position: relative;">
+                        <span
+                            style="position: absolute; left: -22px; top: 0; background: var(--color-success); width: 10px; height: 10px; border-radius: 50%;"></span>
+                        <div style="font-size: 0.875rem; font-weight: 600;">Last Collection</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">2 hours ago - 100% Collected</div>
+                    </div>
+                    <div style="margin-bottom: 12px; position: relative;">
+                        <span
+                            style="position: absolute; left: -22px; top: 0; background: var(--color-danger); width: 10px; height: 10px; border-radius: 50%;"></span>
+                        <div style="font-size: 0.875rem; font-weight: 600;">Full Threshold Reached</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">Yesterday, 4:30 PM</div>
+                    </div>
+                    <div style="margin-bottom: 12px; position: relative;">
+                        <span
+                            style="position: absolute; left: -22px; top: 0; background: var(--color-neutral); width: 10px; height: 10px; border-radius: 50%;"></span>
+                        <div style="font-size: 0.875rem; font-weight: 600;">Scheduled Cleanup</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">3 days ago</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
